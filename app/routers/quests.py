@@ -1,29 +1,66 @@
-from fastapi import APIRouter
-from app.database import SessionLocal
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+
+from app.database import get_db
+from app.dependencies.auth import get_current_user
+from app.models.user import User
 from app.models.quest import Quest
-from app.engines.quest_engine import ensure_daily_quests
 
-router = APIRouter(prefix="/quests", tags=["quests"])
+router = APIRouter(prefix="/quests", tags=["Quests"])
 
-@router.get("/today/{user_id}")
-def get_today_quests(user_id: int):
-    db = SessionLocal()
-    try:
-        ensure_daily_quests(db, user_id)
 
-        quests = db.query(Quest).filter(Quest.user_id == user_id).all()
+@router.post("/create")
+def create_quest(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    quest = Quest(
+        user_id=current_user.id,
+        title="Disiplin geliştir",
+        description="3 study action yap",
+        quest_type="study",
+        target_value=3,
+        progress=0,
+        completed=False,
+        xp_reward=50
+    )
 
-        return [
-            {
-                "id": q.id,
-                "title": q.title,
-                "action_type": q.action_type,
-                "target_value": q.target_value,
-                "progress_value": q.progress_value,
-                "reward_xp": q.reward_xp,
-                "is_completed": q.is_completed
-            }
-            for q in quests
-        ]
-    finally:
-        db.close()
+    db.add(quest)
+    db.commit()
+    db.refresh(quest)
+
+    return {
+        "message": "quest oluşturuldu",
+        "quest": {
+            "id": quest.id,
+            "title": quest.title,
+            "description": quest.description,
+            "quest_type": quest.quest_type,
+            "target_value": quest.target_value,
+            "progress": quest.progress,
+            "completed": quest.completed,
+            "xp_reward": quest.xp_reward
+        }
+    }
+
+
+@router.get("")
+def get_quests(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    quests = db.query(Quest).filter(Quest.user_id == current_user.id).all()
+
+    return [
+        {
+            "id": quest.id,
+            "title": quest.title,
+            "description": quest.description,
+            "quest_type": quest.quest_type,
+            "target_value": quest.target_value,
+            "progress": quest.progress,
+            "completed": quest.completed,
+            "xp_reward": quest.xp_reward
+        }
+        for quest in quests
+    ]

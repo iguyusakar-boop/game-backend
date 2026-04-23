@@ -1,74 +1,57 @@
+from datetime import date
+from sqlalchemy.orm import Session
+
 from app.models.quest import Quest
 
-def ensure_daily_quests(db, user_id: int):
-    existing = db.query(Quest).filter(Quest.user_id == user_id).all()
+
+def ensure_daily_quests(db: Session, user_id: int):
+    today = date.today()
+
+    # bugün quest var mı kontrol et
+    existing = db.query(Quest).filter(
+        Quest.user_id == user_id,
+        Quest.quest_date == today
+    ).first()
 
     if existing:
-        return existing
+        return  # zaten var
 
+    # yoksa oluştur
     quests = [
         Quest(
             user_id=user_id,
-            title="Bugün 3 kez study yap",
-            action_type="study",
-            target_value=3,
-            progress_value=0,
-            reward_xp=30,
-            is_completed=False
+            title="Bugün 1 action tamamla",
+            description="Herhangi bir alanda 1 action gir",
+            quest_type="daily_action",
+            target_value=1,
+            progress=0,
+            completed=False,
+            xp_reward=20,
+            quest_date=today
         ),
         Quest(
             user_id=user_id,
-            title="Bugün 1 kez meditation yap",
-            action_type="meditation",
-            target_value=1,
-            progress_value=0,
-            reward_xp=20,
-            is_completed=False
+            title="Disiplin geliştir",
+            description="2 adet study veya work action gir",
+            quest_type="daily_discipline",
+            target_value=2,
+            progress=0,
+            completed=False,
+            xp_reward=30,
+            quest_date=today
         ),
         Quest(
             user_id=user_id,
-            title="Bugün 1 kez workout yap",
-            action_type="workout",
+            title="Seriyi koru",
+            description="Bugün en az 1 işlem yap",
+            quest_type="daily_streak",
             target_value=1,
-            progress_value=0,
-            reward_xp=25,
-            is_completed=False
+            progress=0,
+            completed=False,
+            xp_reward=25,
+            quest_date=today
         )
     ]
 
-    for quest in quests:
-        db.add(quest)
-
+    db.add_all(quests)
     db.commit()
-
-    return db.query(Quest).filter(Quest.user_id == user_id).all()
-
-
-def apply_action_to_quests(db, user, action_type: str, value: int):
-    quests = db.query(Quest).filter(
-        Quest.user_id == user.id,
-        Quest.is_completed == False
-    ).all()
-
-    completed_quests = []
-    bonus_xp = 0
-
-    for quest in quests:
-        if quest.action_type != action_type:
-            continue
-
-        quest.progress_value += value
-
-        if quest.progress_value >= quest.target_value:
-            quest.progress_value = quest.target_value
-            quest.is_completed = True
-            bonus_xp += quest.reward_xp
-            completed_quests.append({
-                "quest_id": quest.id,
-                "title": quest.title,
-                "reward_xp": quest.reward_xp
-            })
-
-    user.xp += bonus_xp
-
-    return completed_quests, bonus_xp

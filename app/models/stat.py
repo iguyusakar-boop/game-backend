@@ -1,7 +1,8 @@
 from sqlalchemy import Column, Integer, ForeignKey
 from app.database import Base
 
-class UserStats(Base):
+
+class UserStat(Base):
     __tablename__ = "user_stats"
 
     id = Column(Integer, primary_key=True, index=True)

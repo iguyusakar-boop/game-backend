@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, Date, ForeignKey
 from app.database import Base
 
+
 class UserStreak(Base):
     __tablename__ = "user_streaks"
 
